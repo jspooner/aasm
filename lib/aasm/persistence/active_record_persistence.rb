@@ -38,6 +38,8 @@ module AASM
         end
         # ensure initial aasm state even when validations are skipped
         base.before_create(:aasm_ensure_initial_state)
+        # Add a validate method for ActiveRecord to prevent persisting invalid states
+        base.validate :aasm_validate_states
       end
 
       module ClassMethods
@@ -144,6 +146,14 @@ module AASM
           end
 
           success
+        end
+
+        def aasm_validate_states
+          unless AASM::StateMachine[self.class].config.skip_validation_on_save
+            if aasm.current_state && !aasm.states.include?(aasm.current_state)
+              self.errors.add(AASM::StateMachine[self.class].config.column , "is invalid")
+            end
+          end
         end
       end # InstanceMethods
 
